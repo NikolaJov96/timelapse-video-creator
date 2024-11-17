@@ -11,3 +11,4 @@ class FramePreprocessorOptions:
     worker_thread_count: int
     latitude: float | None
     longitude: float | None
+    ignore_daylight_savings_switch: bool

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 import cv2
+import pytz
 from exif_reader import ExifReader
 from suntimes import SunTimes
 from tqdm import tqdm
@@ -26,6 +27,8 @@ class FramePreprocessor:
 
     def __init__(self, options: FramePreprocessorOptions) -> None:
         self.__options = options
+
+        self.__is_first_frame_in_daylight_savings: bool
 
     def preprocess_frames(self):
         """
@@ -55,6 +58,10 @@ class FramePreprocessor:
         sorted_image_paths = sorted(image_paths, key=lambda x: images_data[x].timestamp_s)
         # sorted_image_paths = [sorted_image_paths[0]]
         image_ids = {image_path: i for i, image_path in enumerate(sorted_image_paths)}
+
+        self.__is_first_frame_in_daylight_savings = self.__is_daylight_savings(
+            images_data[sorted_image_paths[0]].timestamp_s,
+            'Europe/Belgrade')
 
         with futures.ThreadPoolExecutor(max_workers=self.__options.worker_thread_count) as executor:
             futures_list = [
@@ -86,6 +93,19 @@ class FramePreprocessor:
         if self.__options.longitude is not None:
             assert -180 <= self.__options.longitude <= 180, f'Longitude {self.__options.longitude} out of range [-180, 180]'
 
+    def __is_daylight_savings(self, timestamp_s: int, timezone: str) -> bool:
+        """
+        """
+        timezone = pytz.timezone(timezone)
+        date_time = datetime.fromtimestamp(timestamp_s)
+        try:
+            timezone_aware_date = timezone.localize(date_time, is_dst=None)
+            return timezone_aware_date.tzinfo._dst.seconds != 0
+        except pytz.exceptions.AmbiguousTimeError:
+            # This happens in the exact hour when daylight savings switch occurs
+            # We will consider these frames as not in daylight savings
+            return False
+
     def __process_image(
             self,
             image_path: pathlib.Path,
@@ -96,18 +116,26 @@ class FramePreprocessor:
         fade_seconds = 30 * 60
         night_margin_seconds = 60 * 60
 
+        frame_timestamp_s = image_data.timestamp_s
+        if self.__options.ignore_daylight_savings_switch:
+            is_frame_in_daylight_savings = self.__is_daylight_savings(frame_timestamp_s, 'Europe/Belgrade')
+            if self.__is_first_frame_in_daylight_savings and not is_frame_in_daylight_savings:
+                frame_timestamp_s -= 60 * 60
+            elif not self.__is_first_frame_in_daylight_savings and is_frame_in_daylight_savings:
+                frame_timestamp_s += 60 * 60
+
         sun = SunTimes(
             longitude=image_data.longitude,
             latitude=image_data.latitude,
             altitude=0)
-        sun_rise = sun.risewhere(date.fromtimestamp(image_data.timestamp_s), 'Europe/Belgrade')
-        sun_set = sun.setwhere(date.fromtimestamp(image_data.timestamp_s), 'Europe/Belgrade')
+        sun_rise = sun.risewhere(date.fromtimestamp(frame_timestamp_s), 'Europe/Belgrade')
+        sun_set = sun.setwhere(date.fromtimestamp(frame_timestamp_s), 'Europe/Belgrade')
 
         earliest_frame_timestamp_s = sun_rise.timestamp() - night_margin_seconds
         latest_frame_timestamp_s = sun_set.timestamp() + night_margin_seconds
 
-        seconds_since_earliest_frame = image_data.timestamp_s - earliest_frame_timestamp_s
-        seconds_until_latest_frame = latest_frame_timestamp_s - image_data.timestamp_s
+        seconds_since_earliest_frame = frame_timestamp_s - earliest_frame_timestamp_s
+        seconds_until_latest_frame = latest_frame_timestamp_s - frame_timestamp_s
 
         if seconds_since_earliest_frame < 0 or seconds_until_latest_frame < 0:
             return
@@ -116,9 +144,10 @@ class FramePreprocessor:
         close_to_latest_frame = 0 <= seconds_until_latest_frame <= fade_seconds
 
         image_id_str = f'{image_id:010d}'
-        image_time_str = datetime.fromtimestamp(image_data.timestamp_s).strftime('%Y_%m_%d_%H_%M_%S')
-        night_flag = self.__get_night_flag(image_data.timestamp_s, sun_rise, sun_set)
-        new_image_name = f'{image_id_str}_{image_time_str}{night_flag}.jpg'
+        image_time_str = datetime.fromtimestamp(frame_timestamp_s).strftime('%Y_%m_%d_%H_%M_%S')
+        night_flag = self.__get_night_flag(frame_timestamp_s, sun_rise, sun_set)
+        daylight_savings_flag = '_d' if frame_timestamp_s != image_data.timestamp_s else ''
+        new_image_name = f'{image_id_str}_{image_time_str}{night_flag}{daylight_savings_flag}.jpg'
         subfolder_path = self.__options.output_dir / f'{image_id // self.MAX_IMAGES_PER_FOLDER:03d}'
         new_image_path = subfolder_path / new_image_name
 

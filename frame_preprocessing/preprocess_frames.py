@@ -17,6 +17,7 @@ def parse_args() -> FramePreprocessorOptions:
     parser.add_argument('--worker_thread_count', type=int, default=20, help='Number of worker threads')
     parser.add_argument('--latitude', type=float, default=None, help='Latitude of the video location, not required if all images have GPS data')  # noqa: E501
     parser.add_argument('--longitude', type=float, default=None, help='Longitude of the video location, not required if all images have GPS')  # noqa: E501
+    parser.add_argument('--ignore_daylight_savings_switch', action='store_true', help='Ignore daylight savings switch')
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
@@ -25,7 +26,8 @@ def parse_args() -> FramePreprocessorOptions:
         input_dirs=args.image_dirs,
         worker_thread_count=args.worker_thread_count,
         latitude=args.latitude,
-        longitude=args.longitude)
+        longitude=args.longitude,
+        ignore_daylight_savings_switch=args.ignore_daylight_savings_switch)
 
 
 def main():
