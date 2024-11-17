@@ -30,11 +30,7 @@ class FramePreprocessor:
     def preprocess_frames(self):
         """
         """
-        assert not self.__options.output_dir.exists(), f'Output directory {self.__options.output_dir} already exists'
-        assert len(self.__options.input_dirs) > 0, 'No input directories provided'
-        for input_dir in self.__options.input_dirs:
-            assert input_dir.is_dir(), f'Input directory {input_dir} does not exist'
-        assert len(self.__options.input_dirs) == len(set(self.__options.input_dirs)), 'Duplicate input directories'
+        self.__check_options()
 
         image_paths: list[pathlib.Path] = []
         for input_dir in self.__options.input_dirs:
@@ -71,6 +67,24 @@ class FramePreprocessor:
             ]
             for future in tqdm(futures.as_completed(futures_list), total=len(futures_list), desc='Processing images'):
                 future.result()
+
+    def __check_options(self):
+        """
+        """
+        assert not self.__options.output_dir.exists(), f'Output directory {self.__options.output_dir} already exists'
+
+        assert len(self.__options.input_dirs) > 0, 'No input directories provided'
+        for input_dir in self.__options.input_dirs:
+            assert input_dir.is_dir(), f'Input directory {input_dir} does not exist'
+        assert len(self.__options.input_dirs) == len(set(self.__options.input_dirs)), 'Duplicate input directories'
+
+        assert self.__options.worker_thread_count > 0, f'Invalid worker thread count {self.__options.worker_thread_count}'
+
+        if self.__options.latitude is not None:
+            assert -90 <= self.__options.latitude <= 90, f'Latitude {self.__options.latitude} out of range [-90, 90]'
+
+        if self.__options.longitude is not None:
+            assert -180 <= self.__options.longitude <= 180, f'Longitude {self.__options.longitude} out of range [-180, 180]'
 
     def __process_image(
             self,
