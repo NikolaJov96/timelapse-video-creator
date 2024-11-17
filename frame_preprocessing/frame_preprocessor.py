@@ -79,7 +79,8 @@ class FramePreprocessor:
             image_data: ImageData) -> None:
         """
         """
-        fade_out_seconds = 30 * 60
+        fade_seconds = 30 * 60
+        night_margin_seconds = 60 * 60
 
         sun = SunTimes(
             longitude=image_data.longitude,
@@ -88,40 +89,52 @@ class FramePreprocessor:
         sun_rise = sun.risewhere(date.fromtimestamp(image_data.timestamp_s), 'Europe/Belgrade')
         sun_set = sun.setwhere(date.fromtimestamp(image_data.timestamp_s), 'Europe/Belgrade')
 
-        seconds_since_sunrise = image_data.timestamp_s - sun_rise.timestamp()
-        seconds_until_sunset = sun_set.timestamp() - image_data.timestamp_s
+        earliest_frame_timestamp_s = sun_rise.timestamp() - night_margin_seconds
+        latest_frame_timestamp_s = sun_set.timestamp() + night_margin_seconds
 
-        is_before_sunrise = seconds_since_sunrise < 0
-        is_after_sunset = seconds_until_sunset < 0
+        seconds_since_earliest_frame = image_data.timestamp_s - earliest_frame_timestamp_s
+        seconds_until_latest_frame = latest_frame_timestamp_s - image_data.timestamp_s
 
-        close_to_sunrise = abs(seconds_since_sunrise) < fade_out_seconds and is_before_sunrise
-        close_to_sunset = abs(seconds_until_sunset) < fade_out_seconds and is_after_sunset
-
-        if (is_before_sunrise or is_after_sunset) and not (close_to_sunrise or close_to_sunset):
+        if seconds_since_earliest_frame < 0 or seconds_until_latest_frame < 0:
             return
+
+        close_to_earliest_frame = 0 <= seconds_since_earliest_frame <= fade_seconds
+        close_to_latest_frame = 0 <= seconds_until_latest_frame <= fade_seconds
 
         image_id_str = f'{image_id:010d}'
         image_time_str = datetime.fromtimestamp(image_data.timestamp_s).strftime('%Y_%m_%d_%H_%M_%S')
-        night_flag = ''
-        if is_before_sunrise:
-            night_flag = '_b'
-        elif is_after_sunset:
-            night_flag = '_a'
+        night_flag = self.__get_night_flag(image_data.timestamp_s, sun_rise, sun_set)
         new_image_name = f'{image_id_str}_{image_time_str}{night_flag}.jpg'
-        subfolder_name = f'{image_id // self.MAX_IMAGES_PER_FOLDER:03d}'
-        new_image_path = self.__options.output_dir / subfolder_name / new_image_name
+        subfolder_path = self.__options.output_dir / f'{image_id // self.MAX_IMAGES_PER_FOLDER:03d}'
+        new_image_path = subfolder_path / new_image_name
 
-        if close_to_sunrise or close_to_sunset:
-            if close_to_sunrise:
-                progress = 1 - abs(seconds_since_sunrise) / fade_out_seconds
+        if close_to_earliest_frame or close_to_latest_frame:
+            if close_to_earliest_frame:
+                progress = seconds_since_earliest_frame / fade_seconds
             else:
-                progress = 1 - abs(seconds_until_sunset) / fade_out_seconds
+                progress = seconds_until_latest_frame / fade_seconds
             assert 0 <= progress <= 1, f'Invalid progress value {progress}'
 
             image = cv2.imread(str(image_path))
             image = (image * progress).astype('uint8')
-            self.__options.output_dir.mkdir(parents=True, exist_ok=True)
+            subfolder_path.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(new_image_path), image)
         else:
-            self.__options.output_dir.mkdir(parents=True, exist_ok=True)
+            subfolder_path.mkdir(parents=True, exist_ok=True)
             shutil.copy(image_path, new_image_path)
+
+    def __get_night_flag(self, timestamp_s: int, sun_rise: datetime, sun_set: datetime) -> str:
+        """
+        """
+        seconds_since_sunrise = timestamp_s - sun_rise.timestamp()
+        seconds_until_sunset = sun_set.timestamp() - timestamp_s
+
+        is_before_sunrise = seconds_since_sunrise < 0
+        is_after_sunset = seconds_until_sunset < 0
+
+        if is_before_sunrise:
+            return '_b'
+        elif is_after_sunset:
+            return '_a'
+        else:
+            return ''
