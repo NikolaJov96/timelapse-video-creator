@@ -27,7 +27,7 @@ class FramePreprocessor:
 
     def __init__(self, options: FramePreprocessorOptions) -> None:
         self.__options = options
-        self.__check_directories()
+        self.__check_options()
 
         self.__is_first_frame_in_daylight_savings: bool
         self.__timezone = pytz.timezone(self.__options.timezone)
@@ -37,44 +37,17 @@ class FramePreprocessor:
         """
         self.__check_directories()
 
-        image_paths: list[pathlib.Path] = []
-        for input_dir in self.__options.input_dirs:
-            image_paths.extend(
-                f for f in input_dir.glob('./**/*.*')
-                if f.suffix.lower() in ['.jpg', '.jpeg', '.png']
-            )
-        assert len(image_paths) > 0, 'No images found in input directories'
-
-        images_data: dict[pathlib.Path, ImageData] = {}
-        for image_path in tqdm(image_paths, desc='Reading image timestamps'):
-            exif_data = ExifReader.read_exif_data(image_path)
-            assert exif_data.timestamp_s is not None, f'No timestamp found for {image_path}'
-            assert exif_data.latitude is not None or self.__options.latitude is not None, f'No latitude found for {image_path}'
-            assert exif_data.longitude is not None or self.__options.longitude is not None, f'No longitude found for {image_path}'
-            images_data[image_path] = ImageData(
-                timestamp_s=exif_data.timestamp_s,
-                latitude=exif_data.latitude if exif_data.latitude is not None else self.__options.latitude,
-                longitude=exif_data.longitude if exif_data.longitude is not None else self.__options.longitude)
+        image_paths = self.__get_image_paths()
+        images_data = self.__get_images_data(image_paths)
 
         # Sort images by timestamp
         sorted_image_paths = sorted(image_paths, key=lambda x: images_data[x].timestamp_s)
-        # sorted_image_paths = [sorted_image_paths[0]]
         image_ids = {image_path: i for i, image_path in enumerate(sorted_image_paths)}
 
         self.__is_first_frame_in_daylight_savings = self.__is_daylight_savings(
             images_data[sorted_image_paths[0]].timestamp_s)
 
-        with futures.ThreadPoolExecutor(max_workers=self.__options.worker_thread_count) as executor:
-            futures_list = [
-                executor.submit(
-                    self.__process_image,
-                    image_path,
-                    image_ids[image_path],
-                    images_data[image_path])
-                for image_path in sorted_image_paths
-            ]
-            for future in tqdm(futures.as_completed(futures_list), total=len(futures_list), desc='Processing images'):
-                future.result()
+        self.__run_parallel_image_processing(sorted_image_paths, image_ids, images_data)
 
     def __check_options(self):
         """
@@ -104,6 +77,35 @@ class FramePreprocessor:
         for input_dir in self.__options.input_dirs:
             assert input_dir.is_dir(), f'Input directory {input_dir} does not exist'
 
+    def __get_image_paths(self) -> list[pathlib.Path]:
+        """
+        """
+        image_paths: list[pathlib.Path] = []
+        for input_dir in self.__options.input_dirs:
+            image_paths.extend(
+                f for f in input_dir.glob('./**/*.*')
+                if f.suffix.lower() in ['.jpg', '.jpeg', '.png']
+            )
+
+        assert len(image_paths) > 0, 'No images found in input directories'
+        return image_paths
+
+    def __get_images_data(self, image_paths: list[pathlib.Path]) -> dict[pathlib.Path, ImageData]:
+        """
+        """
+        images_data: dict[pathlib.Path, ImageData] = {}
+        for image_path in tqdm(image_paths, desc='Reading image data'):
+            exif_data = ExifReader.read_exif_data(image_path)
+            assert exif_data.timestamp_s is not None, f'No timestamp found for {image_path}'
+            assert exif_data.latitude is not None or self.__options.latitude is not None, f'No latitude found for {image_path}'
+            assert exif_data.longitude is not None or self.__options.longitude is not None, f'No longitude found for {image_path}'
+            images_data[image_path] = ImageData(
+                timestamp_s=exif_data.timestamp_s,
+                latitude=exif_data.latitude if exif_data.latitude is not None else self.__options.latitude,
+                longitude=exif_data.longitude if exif_data.longitude is not None else self.__options.longitude)
+
+        return images_data
+
     def __is_daylight_savings(self, timestamp_s: int) -> bool:
         """
         """
@@ -115,6 +117,25 @@ class FramePreprocessor:
             # This happens in the exact hour when daylight savings switch occurs
             # We will consider these frames as not in daylight savings
             return False
+
+    def __run_parallel_image_processing(
+            self,
+            sorted_image_paths: list[pathlib.Path],
+            image_ids: dict[pathlib.Path, int],
+            images_data: dict[pathlib.Path, ImageData]) -> None:
+        """
+        """
+        with futures.ThreadPoolExecutor(max_workers=self.__options.worker_thread_count) as executor:
+            futures_list = [
+                executor.submit(
+                    self.__process_image,
+                    image_path,
+                    image_ids[image_path],
+                    images_data[image_path])
+                for image_path in sorted_image_paths
+            ]
+            for future in tqdm(futures.as_completed(futures_list), total=len(futures_list), desc='Processing images'):
+                future.result()
 
     def __process_image(
             self,
