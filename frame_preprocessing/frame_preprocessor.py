@@ -82,6 +82,8 @@ class FramePreprocessor:
         assert len(self.__options.input_dirs) > 0, 'No input directories provided'
         assert len(self.__options.input_dirs) == len(set(self.__options.input_dirs)), 'Duplicate input directories'
 
+        assert self.__options.timezone in pytz.all_timezones, f'Invalid timezone {self.__options.timezone}'
+
         assert self.__options.worker_thread_count > 0, f'Invalid worker thread count {self.__options.worker_thread_count}'
 
         if self.__options.latitude is not None:
@@ -90,7 +92,9 @@ class FramePreprocessor:
         if self.__options.longitude is not None:
             assert -180 <= self.__options.longitude <= 180, f'Longitude {self.__options.longitude} out of range [-180, 180]'
 
-        assert self.__options.timezone in pytz.all_timezones, f'Invalid timezone {self.__options.timezone}'
+        assert 0 <= self.__options.fade_seconds <= 14400, f'Fade seconds {self.__options.fade_seconds} out of range [0, 14400]'
+        assert 0 <= self.__options.night_margin_seconds <= 14400, \
+            f'Night margin seconds {self.__options.night_margin_seconds} out of range [0, 14400]'
 
     def __check_directories(self):
         """
@@ -119,9 +123,6 @@ class FramePreprocessor:
             image_data: ImageData) -> None:
         """
         """
-        fade_seconds = 30 * 60
-        night_margin_seconds = 60 * 60
-
         frame_timestamp_s = image_data.timestamp_s
         if self.__options.ignore_daylight_savings_switch:
             is_frame_in_daylight_savings = self.__is_daylight_savings(frame_timestamp_s)
@@ -137,8 +138,8 @@ class FramePreprocessor:
         sun_rise = sun.risewhere(date.fromtimestamp(frame_timestamp_s), self.__options.timezone)
         sun_set = sun.setwhere(date.fromtimestamp(frame_timestamp_s), self.__options.timezone)
 
-        earliest_frame_timestamp_s = sun_rise.timestamp() - night_margin_seconds
-        latest_frame_timestamp_s = sun_set.timestamp() + night_margin_seconds
+        earliest_frame_timestamp_s = sun_rise.timestamp() - self.__options.night_margin_seconds
+        latest_frame_timestamp_s = sun_set.timestamp() + self.__options.night_margin_seconds
 
         seconds_since_earliest_frame = frame_timestamp_s - earliest_frame_timestamp_s
         seconds_until_latest_frame = latest_frame_timestamp_s - frame_timestamp_s
@@ -146,8 +147,8 @@ class FramePreprocessor:
         if seconds_since_earliest_frame < 0 or seconds_until_latest_frame < 0:
             return
 
-        close_to_earliest_frame = 0 <= seconds_since_earliest_frame <= fade_seconds
-        close_to_latest_frame = 0 <= seconds_until_latest_frame <= fade_seconds
+        close_to_earliest_frame = 0 <= seconds_since_earliest_frame <= self.__options.fade_seconds
+        close_to_latest_frame = 0 <= seconds_until_latest_frame <= self.__options.fade_seconds
 
         image_id_str = f'{image_id:010d}'
         image_time_str = datetime.fromtimestamp(frame_timestamp_s).strftime('%Y_%m_%d_%H_%M_%S')
@@ -159,9 +160,9 @@ class FramePreprocessor:
 
         if close_to_earliest_frame or close_to_latest_frame:
             if close_to_earliest_frame:
-                progress = seconds_since_earliest_frame / fade_seconds
+                progress = seconds_since_earliest_frame / self.__options.fade_seconds
             else:
-                progress = seconds_until_latest_frame / fade_seconds
+                progress = seconds_until_latest_frame / self.__options.fade_seconds
             assert 0 <= progress <= 1, f'Invalid progress value {progress}'
 
             image = cv2.imread(str(image_path))

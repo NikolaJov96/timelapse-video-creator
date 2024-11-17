@@ -19,6 +19,8 @@ def parse_args() -> FramePreprocessorOptions:
     parser.add_argument('--latitude', type=float, default=None, help='Latitude of the video location, not required if all images have GPS data')  # noqa: E501
     parser.add_argument('--longitude', type=float, default=None, help='Longitude of the video location, not required if all images have GPS')  # noqa: E501
     parser.add_argument('--ignore_daylight_savings_switch', action='store_true', help='Ignore daylight savings switch')
+    parser.add_argument('--fade_seconds', type=int, default=900, help='Number of seconds to fade on sunrise and sunset')
+    parser.add_argument('--night_margin_seconds', type=int, default=3600, help='Number of seconds of night to add before the sunrise and after the sunset')  # noqa: E501
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
@@ -29,7 +31,9 @@ def parse_args() -> FramePreprocessorOptions:
         worker_thread_count=args.worker_thread_count,
         latitude=args.latitude,
         longitude=args.longitude,
-        ignore_daylight_savings_switch=args.ignore_daylight_savings_switch)
+        ignore_daylight_savings_switch=args.ignore_daylight_savings_switch,
+        fade_seconds=args.fade_seconds,
+        night_margin_seconds=args.night_margin_seconds)
 
 
 def main():
