@@ -27,13 +27,15 @@ class FramePreprocessor:
 
     def __init__(self, options: FramePreprocessorOptions) -> None:
         self.__options = options
+        self.__check_directories()
 
         self.__is_first_frame_in_daylight_savings: bool
+        self.__timezone = pytz.timezone(self.__options.timezone)
 
     def preprocess_frames(self):
         """
         """
-        self.__check_options()
+        self.__check_directories()
 
         image_paths: list[pathlib.Path] = []
         for input_dir in self.__options.input_dirs:
@@ -60,8 +62,7 @@ class FramePreprocessor:
         image_ids = {image_path: i for i, image_path in enumerate(sorted_image_paths)}
 
         self.__is_first_frame_in_daylight_savings = self.__is_daylight_savings(
-            images_data[sorted_image_paths[0]].timestamp_s,
-            'Europe/Belgrade')
+            images_data[sorted_image_paths[0]].timestamp_s)
 
         with futures.ThreadPoolExecutor(max_workers=self.__options.worker_thread_count) as executor:
             futures_list = [
@@ -78,11 +79,7 @@ class FramePreprocessor:
     def __check_options(self):
         """
         """
-        assert not self.__options.output_dir.exists(), f'Output directory {self.__options.output_dir} already exists'
-
         assert len(self.__options.input_dirs) > 0, 'No input directories provided'
-        for input_dir in self.__options.input_dirs:
-            assert input_dir.is_dir(), f'Input directory {input_dir} does not exist'
         assert len(self.__options.input_dirs) == len(set(self.__options.input_dirs)), 'Duplicate input directories'
 
         assert self.__options.worker_thread_count > 0, f'Invalid worker thread count {self.__options.worker_thread_count}'
@@ -93,13 +90,22 @@ class FramePreprocessor:
         if self.__options.longitude is not None:
             assert -180 <= self.__options.longitude <= 180, f'Longitude {self.__options.longitude} out of range [-180, 180]'
 
-    def __is_daylight_savings(self, timestamp_s: int, timezone: str) -> bool:
+        assert self.__options.timezone in pytz.all_timezones, f'Invalid timezone {self.__options.timezone}'
+
+    def __check_directories(self):
         """
         """
-        timezone = pytz.timezone(timezone)
+        assert not self.__options.output_dir.exists(), f'Output directory {self.__options.output_dir} already exists'
+
+        for input_dir in self.__options.input_dirs:
+            assert input_dir.is_dir(), f'Input directory {input_dir} does not exist'
+
+    def __is_daylight_savings(self, timestamp_s: int) -> bool:
+        """
+        """
         date_time = datetime.fromtimestamp(timestamp_s)
         try:
-            timezone_aware_date = timezone.localize(date_time, is_dst=None)
+            timezone_aware_date = self.__timezone.localize(date_time, is_dst=None)
             return timezone_aware_date.tzinfo._dst.seconds != 0
         except pytz.exceptions.AmbiguousTimeError:
             # This happens in the exact hour when daylight savings switch occurs
@@ -118,7 +124,7 @@ class FramePreprocessor:
 
         frame_timestamp_s = image_data.timestamp_s
         if self.__options.ignore_daylight_savings_switch:
-            is_frame_in_daylight_savings = self.__is_daylight_savings(frame_timestamp_s, 'Europe/Belgrade')
+            is_frame_in_daylight_savings = self.__is_daylight_savings(frame_timestamp_s)
             if self.__is_first_frame_in_daylight_savings and not is_frame_in_daylight_savings:
                 frame_timestamp_s -= 60 * 60
             elif not self.__is_first_frame_in_daylight_savings and is_frame_in_daylight_savings:
@@ -128,8 +134,8 @@ class FramePreprocessor:
             longitude=image_data.longitude,
             latitude=image_data.latitude,
             altitude=0)
-        sun_rise = sun.risewhere(date.fromtimestamp(frame_timestamp_s), 'Europe/Belgrade')
-        sun_set = sun.setwhere(date.fromtimestamp(frame_timestamp_s), 'Europe/Belgrade')
+        sun_rise = sun.risewhere(date.fromtimestamp(frame_timestamp_s), self.__options.timezone)
+        sun_set = sun.setwhere(date.fromtimestamp(frame_timestamp_s), self.__options.timezone)
 
         earliest_frame_timestamp_s = sun_rise.timestamp() - night_margin_seconds
         latest_frame_timestamp_s = sun_set.timestamp() + night_margin_seconds

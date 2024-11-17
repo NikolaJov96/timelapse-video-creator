@@ -7,6 +7,7 @@ class FramePreprocessorOptions:
     """
     """
     output_dir: pathlib.Path
+    timezone: str
     input_dirs: list[pathlib.Path]
     worker_thread_count: int
     latitude: float | None
