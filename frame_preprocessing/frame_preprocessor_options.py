@@ -5,6 +5,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class FramePreprocessorOptions:
     """
+    Struct that contains the options for the frame preprocessor.
     """
     output_dir: pathlib.Path
     timezone: str

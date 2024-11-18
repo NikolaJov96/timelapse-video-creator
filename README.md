@@ -1,9 +1,6 @@
 # Multi-day Timelapse Video Editor
 
 TODO:
-- Add fade out duration option
-- Refactor the frame preprocessor to look cleaner
-- Write class and method documentation
 - Write README
 
 ## Frame preprocessing:

@@ -11,7 +11,7 @@ from frame_preprocessing.frame_preprocessor_options import FramePreprocessorOpti
 
 
 def parse_args() -> FramePreprocessorOptions:
-    parser = argparse.ArgumentParser(description='')
+    parser = argparse.ArgumentParser(description='Image preprocessor for creating a multi-day time-lapse video')
     parser.add_argument('output_dir', type=pathlib.Path, help='Directory to save output video frames')
     parser.add_argument('timezone', type=str, help='Timezone of the input images location, as it was set on the camera')
     parser.add_argument('image_dirs', type=pathlib.Path, nargs='+', help='Directories with input images')

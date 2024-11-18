@@ -5,11 +5,13 @@ import pytz
 
 class DatetimeUtils:
     """
+    Class that contains utility functions for datetime operations.
     """
 
     @staticmethod
     def is_in_daylight_savings(timestamp_s: int, timezone_str: str) -> bool:
         """
+        Check if the timestamp is in daylight savings time in the given timezone.
         """
         date_time = datetime.fromtimestamp(timestamp_s)
         timezone = pytz.timezone(timezone_str)

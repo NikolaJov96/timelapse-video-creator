@@ -13,6 +13,10 @@ from frame_preprocessing.single_frame_processor import SingleFrameProcessor
 
 class FramePreprocessor:
     """
+    The main class that preprocesses frames.
+
+    It manages the whole process from aggregating the input data and
+    loading image data to running the parallel image processing.
     """
 
     def __init__(self, options: FramePreprocessorOptions) -> None:
@@ -21,6 +25,7 @@ class FramePreprocessor:
 
     def preprocess_frames(self):
         """
+        Executes the end-to-end frame preprocessing process.
         """
         self.__check_directories()
 
@@ -34,6 +39,7 @@ class FramePreprocessor:
 
     def __check_options(self):
         """
+        Checks the validity of the received options and raises an exception if they are invalid.
         """
         assert len(self.__options.input_dirs) > 0, 'No input directories provided'
         assert len(self.__options.input_dirs) == len(set(self.__options.input_dirs)), 'Duplicate input directories'
@@ -54,6 +60,7 @@ class FramePreprocessor:
 
     def __check_directories(self):
         """
+        Checks the validity of the input and output directories and raises an exception if they are invalid.
         """
         assert not self.__options.output_dir.exists(), f'Output directory {self.__options.output_dir} already exists'
 
@@ -62,6 +69,7 @@ class FramePreprocessor:
 
     def __get_image_paths(self) -> list[pathlib.Path]:
         """
+        Returns a list of image paths found in the input directories.
         """
         image_paths: list[pathlib.Path] = []
         for input_dir in self.__options.input_dirs:
@@ -75,6 +83,8 @@ class FramePreprocessor:
 
     def __get_images_data(self, image_paths: list[pathlib.Path]) -> dict[pathlib.Path, ImageData]:
         """
+        Returns a dictionary of image data objects for each image path.
+        Checks the image data validity along the way.
         """
         images_data: dict[pathlib.Path, ImageData] = {}
         for image_path in tqdm(image_paths, desc='Reading image data'):
@@ -95,6 +105,7 @@ class FramePreprocessor:
             image_ids: dict[pathlib.Path, int],
             images_data: dict[pathlib.Path, ImageData]) -> None:
         """
+        Runs the parallel image processing on the aggregated images.
         """
         is_first_frame_in_daylight_savings = DatetimeUtils.is_in_daylight_savings(
             images_data[sorted_image_paths[0]].timestamp_s,

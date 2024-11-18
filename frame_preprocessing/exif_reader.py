@@ -8,6 +8,8 @@ from exifread.exceptions import ExifNotFound
 @dataclass(frozen=True)
 class ExifData:
     """
+    Struct that contains the EXIF data found in an image.
+    Allows None values for missing data.
     """
     timestamp_s: int | None
     latitude: float | None
@@ -16,6 +18,7 @@ class ExifData:
 
 class ExifReader:
     """
+    Class that reads EXIF data from an image.
     """
     DATE_TIME_TAG = 'DateTimeOriginal'
     GPS_LAT_TAG = 'GPS GPSLatitude'
@@ -27,6 +30,7 @@ class ExifReader:
     @staticmethod
     def read_exif_data(image_path: str) -> ExifData:
         """
+        Read EXIF data from an image.
         """
         with open(image_path, 'rb') as image_file:
             try:
@@ -52,6 +56,7 @@ class ExifReader:
     @staticmethod
     def __parse_gps_data(exif_data: dict) -> tuple[float | None, float | None]:
         """
+        Parses GPS data from the EXIF data dictionary and returns latitude and longitude.
         """
         latitude: float | None = None
         if ExifReader.GPS_LAT_TAG in exif_data and ExifReader.GPS_LAT_REF_TAG in exif_data:
@@ -66,6 +71,7 @@ class ExifReader:
     @staticmethod
     def __parse_coordinate(exif_data: dict, coordinate_tag: str, ref_tag: str) -> float:
         """
+        Parses a GPS coordinate from the EXIF data dictionary.
         """
         coordinate_values = exif_data[coordinate_tag].values
         assert isinstance(coordinate_values, list), 'GPS coordinate is not a list'
@@ -77,7 +83,7 @@ class ExifReader:
     @staticmethod
     def __convert_coordinate(coordinates: tuple[float, float, float], ref: str) -> float:
         """
-        Parse a coordinate from a string.
+        Converts GPS coordinates from degrees, minutes, seconds to decimal.
         """
         degrees, minutes, seconds = coordinates
         sign = 1 if ref in ['N', 'E'] else -1
