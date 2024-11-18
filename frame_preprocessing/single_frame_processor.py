@@ -57,20 +57,30 @@ class SingleFrameProcessor:
             image_id, adjusted_timestamp_s, sunrise, sunset, image_data.timestamp_s)
         new_image_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if close_to_earliest_frame or close_to_latest_frame:
-            # The frame is close to the earliest or the latest frame, apply the fade effect
-            if close_to_earliest_frame:
-                progress = seconds_since_earliest_frame / self.__options.fade_seconds
-            else:
-                progress = seconds_until_latest_frame / self.__options.fade_seconds
-            assert 0 <= progress <= 1, f'Invalid progress value {progress}'
-
+        if close_to_earliest_frame or close_to_latest_frame or self.__options.resize_to_width is not None:
+            # Some processing of the frame is needed
             image = cv2.imread(str(image_path))
-            fade_factor = 1 / (1 + np.exp(-10 * (progress - 0.5)))
-            image = (image * fade_factor).astype('uint8')
+
+            if self.__options.resize_to_width is not None:
+                # Resize the image to the specified width
+                height, width = image.shape[:2]
+                new_height = int(self.__options.resize_to_width / width * height)
+                image = cv2.resize(image, (self.__options.resize_to_width, new_height))
+
+            if close_to_earliest_frame or close_to_latest_frame:
+                # Apply the fade effect to the frame
+                if close_to_earliest_frame:
+                    progress = seconds_since_earliest_frame / self.__options.fade_seconds
+                else:
+                    progress = seconds_until_latest_frame / self.__options.fade_seconds
+                assert 0 <= progress <= 1, f'Invalid progress value {progress}'
+
+                fade_factor = 1 / (1 + np.exp(-10 * (progress - 0.5)))
+                image = (image * fade_factor).astype('uint8')
+
             cv2.imwrite(str(new_image_path), image)
         else:
-            # The frame is not close to the earliest or the latest frame, just copy it
+            # No processing needed, just copy the image
             shutil.copy(image_path, new_image_path)
 
     def __get_daylight_savings_adjusted_timestamp(self, timestamp_s: int) -> int:

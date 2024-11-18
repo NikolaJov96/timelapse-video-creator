@@ -7,7 +7,7 @@ TODO:
 ## Frame preprocessing:
 
 ``` bash
-python3 preprocess_frames.py /processed/frames/dir Europe/Belgrade /input/images/dir_1 /input/images/dir_2 --worker_thread_count 20 --latitude 44.787197 --longitude 20.457273 --ignore_daylight_savings_switch --fade_seconds 1800 --night_margin_seconds 3600
+python3 preprocess_frames.py /processed/frames/dir Europe/Belgrade /input/images/dir_1 /input/images/dir_2 --latitude 44.787197 --longitude 20.457273 --resize_to_width 1920 --fade_seconds 1800 --night_margin_seconds 3600 --ignore_daylight_savings_switch --worker_thread_count 20
 ```
 
 ## Video creation

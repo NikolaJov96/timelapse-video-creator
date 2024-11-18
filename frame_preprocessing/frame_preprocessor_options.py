@@ -7,12 +7,22 @@ class FramePreprocessorOptions:
     """
     Struct that contains the options for the frame preprocessor.
     """
+    # Paths
     output_dir: pathlib.Path
-    timezone: str
     input_dirs: list[pathlib.Path]
-    worker_thread_count: int
+
+    # Video metadata
+    timezone: str
     latitude: float | None
     longitude: float | None
-    ignore_daylight_savings_switch: bool
+    resize_to_width: int | None
+
+    # Fading options
     fade_seconds: int
     night_margin_seconds: int
+
+    # Other options
+    ignore_daylight_savings_switch: bool
+
+    # Processing options
+    worker_thread_count: int

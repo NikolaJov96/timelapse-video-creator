@@ -45,18 +45,18 @@ class FramePreprocessor:
         assert len(self.__options.input_dirs) == len(set(self.__options.input_dirs)), 'Duplicate input directories'
 
         assert self.__options.timezone in pytz.all_timezones, f'Invalid timezone {self.__options.timezone}'
-
-        assert self.__options.worker_thread_count > 0, f'Invalid worker thread count {self.__options.worker_thread_count}'
-
         if self.__options.latitude is not None:
             assert -90 <= self.__options.latitude <= 90, f'Latitude {self.__options.latitude} out of range [-90, 90]'
-
         if self.__options.longitude is not None:
             assert -180 <= self.__options.longitude <= 180, f'Longitude {self.__options.longitude} out of range [-180, 180]'
+        if self.__options.resize_to_width is not None:
+            assert 0 < self.__options.resize_to_width <= 10000, f'Resize width {self.__options.resize_to_width} unsupported'
 
         assert 0 <= self.__options.fade_seconds <= 14400, f'Fade seconds {self.__options.fade_seconds} out of range [0, 14400]'
         assert 0 <= self.__options.night_margin_seconds <= 14400, \
             f'Night margin seconds {self.__options.night_margin_seconds} out of range [0, 14400]'
+
+        assert self.__options.worker_thread_count > 0, f'Invalid worker thread count {self.__options.worker_thread_count}'
 
     def __check_directories(self):
         """
