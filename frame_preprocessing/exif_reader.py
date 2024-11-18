@@ -55,26 +55,27 @@ class ExifReader:
         """
         latitude: float | None = None
         if ExifReader.GPS_LAT_TAG in exif_data and ExifReader.GPS_LAT_REF_TAG in exif_data:
-            latitude_values = exif_data[ExifReader.GPS_LAT_TAG].values
-            assert isinstance(latitude_values, list), 'Latitude is not a list'
-            assert len(latitude_values) == 3, 'Latitude does not have 3 values'
-            gps_latitude = (float(latitude_values[0]), float(latitude_values[1]), float(latitude_values[2]))
-            gps_latitude_ref = exif_data[ExifReader.GPS_LAT_REF_TAG].values
-            latitude = ExifReader.__parse_coordinate(gps_latitude, gps_latitude_ref)
+            latitude = ExifReader.__parse_coordinate(exif_data, ExifReader.GPS_LAT_TAG, ExifReader.GPS_LAT_REF_TAG)
 
         longitude: tuple[float, float, float] | None = None
         if ExifReader.GPS_LON_TAG in exif_data and ExifReader.GPS_LON_REF_TAG in exif_data:
-            longitude_values = exif_data[ExifReader.GPS_LON_TAG].values
-            assert isinstance(longitude_values, list), 'Longitude is not a list'
-            assert len(longitude_values) == 3, 'Longitude does not have 3 values'
-            gps_longitude = (float(longitude_values[0]), float(longitude_values[1]), float(longitude_values[2]))
-            gps_longitude_ref = exif_data[ExifReader.GPS_LON_REF_TAG].values
-            longitude = ExifReader.__parse_coordinate(gps_longitude, gps_longitude_ref)
+            longitude = ExifReader.__parse_coordinate(exif_data, ExifReader.GPS_LON_TAG, ExifReader.GPS_LON_REF_TAG)
 
         return latitude, longitude
 
     @staticmethod
-    def __parse_coordinate(coordinates: tuple[float, float, float], ref: str) -> float:
+    def __parse_coordinate(exif_data: dict, coordinate_tag: str, ref_tag: str) -> float:
+        """
+        """
+        coordinate_values = exif_data[coordinate_tag].values
+        assert isinstance(coordinate_values, list), 'GPS coordinate is not a list'
+        assert len(coordinate_values) == 3, 'GPS coordinate does not have 3 values'
+        gps_coordinate = (float(coordinate_values[0]), float(coordinate_values[1]), float(coordinate_values[2]))
+        gps_coordinate_ref = exif_data[ref_tag].values
+        return ExifReader.__convert_coordinate(gps_coordinate, gps_coordinate_ref)
+
+    @staticmethod
+    def __convert_coordinate(coordinates: tuple[float, float, float], ref: str) -> float:
         """
         Parse a coordinate from a string.
         """
