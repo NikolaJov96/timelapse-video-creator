@@ -3,6 +3,7 @@ import shutil
 from datetime import date, datetime
 
 import cv2
+import numpy as np
 from suntimes import SunTimes
 
 from frame_preprocessing.datetime_utils import DatetimeUtils
@@ -65,7 +66,8 @@ class SingleFrameProcessor:
             assert 0 <= progress <= 1, f'Invalid progress value {progress}'
 
             image = cv2.imread(str(image_path))
-            image = (image * progress).astype('uint8')
+            fade_factor = 1 / (1 + np.exp(-10 * (progress - 0.5)))
+            image = (image * fade_factor).astype('uint8')
             cv2.imwrite(str(new_image_path), image)
         else:
             # The frame is not close to the earliest or the latest frame, just copy it
