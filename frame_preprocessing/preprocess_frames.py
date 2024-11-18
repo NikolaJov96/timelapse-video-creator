@@ -21,6 +21,7 @@ def parse_args() -> FramePreprocessorOptions:
     parser.add_argument('--fade_seconds', type=int, default=900, help='Number of seconds to fade on sunrise and sunset')
     parser.add_argument('--night_margin_seconds', type=int, default=3600, help='Number of seconds of night to add before the sunrise and after the sunset')  # noqa: E501
     parser.add_argument('--ignore_daylight_savings_switch', action='store_true', help='Ignore daylight savings switch')
+    parser.add_argument('--render_date_and_time', action='store_true', help='Render date and time on the output frames')
     parser.add_argument('--worker_thread_count', type=int, default=20, help='Number of worker threads')
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
@@ -35,6 +36,7 @@ def parse_args() -> FramePreprocessorOptions:
         fade_seconds=args.fade_seconds,
         night_margin_seconds=args.night_margin_seconds,
         ignore_daylight_savings_switch=args.ignore_daylight_savings_switch,
+        render_date_and_time=args.render_date_and_time,
         worker_thread_count=args.worker_thread_count)
 
 

@@ -57,7 +57,10 @@ class SingleFrameProcessor:
             image_id, adjusted_timestamp_s, sunrise, sunset, image_data.timestamp_s)
         new_image_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if close_to_earliest_frame or close_to_latest_frame or self.__options.resize_to_width is not None:
+        processing_needed = close_to_earliest_frame or close_to_latest_frame or \
+            self.__options.resize_to_width is not None or self.__options.render_date_and_time
+
+        if processing_needed:
             # Some processing of the frame is needed
             image = cv2.imread(str(image_path))
 
@@ -66,6 +69,23 @@ class SingleFrameProcessor:
                 height, width = image.shape[:2]
                 new_height = int(self.__options.resize_to_width / width * height)
                 image = cv2.resize(image, (self.__options.resize_to_width, new_height))
+
+            if self.__options.render_date_and_time:
+                # Render the date and time on the frame
+                date_time_str = datetime.fromtimestamp(image_data.timestamp_s).strftime('%Y-%m-%d %H:%M')
+                scale_coefficient = image.shape[1] / 1500.0
+                # Draw a semi-transparent black rectangle to make the text more readable
+                rectangle_width = int(345 * scale_coefficient)
+                rectangle_height = int(40 * scale_coefficient)
+                image[0:rectangle_height, 0:rectangle_width] = image[0:rectangle_height, 0:rectangle_width] // 2
+                cv2.putText(
+                    img=image,
+                    text=date_time_str,
+                    org=(int(10 * scale_coefficient), int(30 * scale_coefficient)),
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=scale_coefficient,
+                    color=(255, 255, 255),
+                    thickness=int(2 * scale_coefficient))
 
             if close_to_earliest_frame or close_to_latest_frame:
                 # Apply the fade effect to the frame

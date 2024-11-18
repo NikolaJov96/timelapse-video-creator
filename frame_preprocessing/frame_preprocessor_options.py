@@ -23,6 +23,7 @@ class FramePreprocessorOptions:
 
     # Other options
     ignore_daylight_savings_switch: bool
+    render_date_and_time: bool
 
-    # Processing options
+    # Execution options
     worker_thread_count: int
