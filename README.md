@@ -25,21 +25,21 @@ Runs video creation on the frame preprocessing output directory. It uses FFmpeg 
 
 The following example shows how to install required Python libraries, run frame preprocessing, and create a video from the preprocessed frames.
 
-``` bash
+```bash
 pip install -r requirements.txt
 
 python3 frame_preprocessing/preprocess_frames.py \
- /processed/frames/output/dir \
+    /processed/frames/output/dir \
     Europe/Belgrade \
- /input/images/dir_1 \
+    /input/images/dir_1 \
     /input/images/dir_2 \
- --latitude 44.787197 \
+    --latitude 44.787197 \
     --longitude 20.457273 \
- --resize_to_width 1920 \
+    --resize_to_width 1920 \
     --fade_seconds 1800 \
- --night_margin_seconds 3600 \
+    --night_margin_seconds 3600 \
     --ignore_daylight_savings_switch \
- --render_date_and_time \
+    --render_date_and_time \
     --worker_thread_count 20
 
 python3 video_creation/create_video.py /processed/frames/dir /output/video/video.mp4
