@@ -1,0 +1,9 @@
+aiofiles==23.2.1
+argcomplete==3.3.0
+ExifRead==3.0.0
+numpy==1.23.5
+opencv_python==4.8.0.76
+opencv_python_headless==4.9.0.80
+pytz==2023.3.post1
+suntimes==1.1.2
+tqdm==4.66.1
