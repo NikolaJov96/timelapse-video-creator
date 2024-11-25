@@ -2,7 +2,7 @@
 
 A tool for the selection and preprocessing of timelapse images and the creation of a timelapse video. Designed to automate specific tasks for long, multi-day timelapse videos, where manual processing would be prohibitively time-consuming and result in inconsistent quality.
 
-My motivation for creating this tool was a timelapse I was able to capture, of two pigeons hatching and growing up in a nest on my window. The issue was that there was not enough light at night to capture meaningful images, so I needed to filter out the night frames and create smooth transitions between days. An additional challenge was that the daylight savings time switch happened during the timelapse, which had to be accounted for automatically.
+My motivation for creating this tool was a timelapse I was able to capture, of two pigeons hatching and growing up in a nest on my window. The issue was that there was not enough light at night to capture meaningful images, so I needed to filter out the night frames and create smooth transitions between days. An additional challenge was that the daylight savings time switch happened during the timelapse, which had to be accounted for automatically. You can watch the final video on [YouTube](https://youtu.be/dv13GOL8M7I).
 
 The tool includes two sections:
 - Frame preprocessing: selection, preprocessing, and exporting of individual frames, so that they can be visually inspected before creating the video.
